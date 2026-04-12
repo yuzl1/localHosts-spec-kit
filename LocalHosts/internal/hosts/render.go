@@ -14,16 +14,24 @@ func RenderManagedBlock(workspace HostWorkspace) []string {
 		return lines
 	}
 
+	renderGroups := make([]HostGroup, 0, len(groups))
 	for _, group := range groups {
 		entries := entriesForGroup(workspace.Entries, group.ID)
 		if len(entries) == 0 {
 			continue
 		}
-		lines = append(lines, groupStartMarker(group.Name))
+		renderGroups = append(renderGroups, group)
+	}
+
+	for i, group := range renderGroups {
+		entries := entriesForGroup(workspace.Entries, group.ID)
+		lines = append(lines, groupHeaderLine(group.Name))
 		for _, entry := range entries {
 			lines = append(lines, renderEntryLine(entry))
 		}
-		lines = append(lines, groupEndMarker(group.Name))
+		if i != len(renderGroups)-1 {
+			lines = append(lines, "")
+		}
 	}
 
 	lines = append(lines, EndMarker)
@@ -95,6 +103,10 @@ func renderEntryLine(entry HostEntry) string {
 		return body
 	}
 	return "# " + body
+}
+
+func groupHeaderLine(name string) string {
+	return "# --- " + name + " ---"
 }
 
 func groupStartMarker(name string) string {

@@ -34,6 +34,12 @@ func ParseManagedBlockWithGroups(blockLines []string) ([]HostGroup, []HostEntry)
 			continue
 		}
 
+		if name, ok := parseGroupHeader(line); ok {
+			currentGroupID = "group:" + name
+			ensureGroup(currentGroupID, name)
+			continue
+		}
+
 		if name, ok := parseGroupStartMarker(line); ok {
 			currentGroupID = "group:" + name
 			ensureGroup(currentGroupID, name)
@@ -103,6 +109,20 @@ func parseGroupEndMarker(line string) (string, bool) {
 		return "", false
 	}
 	name := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, prefix), suffix))
+	if name == "" {
+		return "", false
+	}
+	return name, true
+}
+
+func parseGroupHeader(line string) (string, bool) {
+	s := strings.TrimSpace(line)
+	const prefix = "# --- "
+	const suffix = " ---"
+	if !strings.HasPrefix(s, prefix) || !strings.HasSuffix(s, suffix) {
+		return "", false
+	}
+	name := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(s, prefix), suffix))
 	if name == "" {
 		return "", false
 	}
