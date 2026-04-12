@@ -1,0 +1,146 @@
+name: Build Installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Universal
+            runner: macos-14
+            platform: darwin/universal
+            artifact: macos-universal
+
+          - name: Windows AMD64
+            runner: windows-latest
+            platform: windows/amd64
+            artifact: windows-amd64
+
+          - name: Windows ARM64
+            runner: windows-latest
+            platform: windows/arm64
+            artifact: windows-arm64
+
+          - name: Linux AMD64
+            runner: ubuntu-latest
+            platform: linux/amd64
+            artifact: linux-amd64
+
+          - name: Linux ARM64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            artifact: linux-arm64
+
+    defaults:
+      run:
+        working-directory: LocalHosts
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          cache-dependency-path: |
+            LocalHosts/go.sum
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: |
+            LocalHosts/frontend/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+        working-directory: LocalHosts/frontend
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build (package)
+        run: wails build -clean -platform "${{ matrix.platform }}" -package
+
+      - name: Package artifact (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd build/bin
+          if [ -d "LocalHosts.app" ]; then
+            ditto -c -k --sequesterRsrc --keepParent "LocalHosts.app" "LocalHosts-${{ matrix.artifact }}.zip"
+          fi
+          if ls *.dmg >/dev/null 2>&1; then
+            cp -f *.dmg "LocalHosts-${{ matrix.artifact }}.dmg"
+          fi
+
+      - name: Package artifact (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd build/bin
+          tar -czf "LocalHosts-${{ matrix.artifact }}.tar.gz" .
+
+      - name: Package artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $out = "LocalHosts-${{ matrix.artifact }}.zip"
+          if (Test-Path "build\\bin") {
+            Compress-Archive -Path "build\\bin\\*" -DestinationPath $out -Force
+          } else {
+            throw "build\\bin not found"
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}.zip
+            LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}.dmg
+            LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}.tar.gz
+            LocalHosts/LocalHosts-${{ matrix.artifact }}.zip
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
