@@ -397,6 +397,9 @@ function lineIndexAtCursor(text, cursor) {
             <div class="section-title">条目</div>
             <div class="subhint">一域名一条</div>
           </div>
+          <div class="entry-actions">
+            <span class="subhint" style="margin-right: 8px;">作者: yuzl (yuzl6@foxmail.com)</span>
+          </div>
         </div>
 
         <div class="editor">
@@ -434,12 +437,66 @@ function lineIndexAtCursor(text, cursor) {
 </template>
 
 <style scoped>
+/* Dark/Light mode theme variables */
 .app {
+  --bg-main: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-active: #eff6ff;
+  --bg-banner-ok: #dcfce7;
+  --bg-banner-error: #fee2e2;
+  --bg-modal-mask: rgba(15, 23, 42, 0.45);
+  --bg-table-head: #f1f5f9;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-ok: #166534;
+  --text-error: #991b1b;
+  --text-btn-primary: #ffffff;
+  
+  --border-color: #e2e8f0;
+  --border-input: #cbd5e1;
+  --border-focus: #93c5fd;
+  
+  --btn-bg: #ffffff;
+  --btn-primary-bg: #2563eb;
+  --btn-primary-border: #2563eb;
+  --btn-danger-border: #ef4444;
+  --btn-danger-text: #ef4444;
+
   height: 100vh;
   display: flex;
   flex-direction: column;
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--text-primary);
+  background: var(--bg-main);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app {
+    --bg-main: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-surface-active: #334155;
+    --bg-banner-ok: #064e3b;
+    --bg-banner-error: #7f1d1d;
+    --bg-modal-mask: rgba(0, 0, 0, 0.6);
+    --bg-table-head: #1e293b;
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-ok: #a7f3d0;
+    --text-error: #fca5a5;
+    --text-btn-primary: #ffffff;
+    
+    --border-color: #334155;
+    --border-input: #475569;
+    --border-focus: #3b82f6;
+    
+    --btn-bg: #1e293b;
+    --btn-primary-bg: #3b82f6;
+    --btn-primary-border: #3b82f6;
+    --btn-danger-border: #f87171;
+    --btn-danger-text: #f87171;
+  }
 }
 
 .header {
@@ -447,19 +504,21 @@ function lineIndexAtCursor(text, cursor) {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
 .title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .toggle {
@@ -467,26 +526,38 @@ function lineIndexAtCursor(text, cursor) {
   align-items: center;
   gap: 6px;
   font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .btn {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  padding: 6px 10px;
-  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--border-focus);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .btn.primary {
-  border-color: #2563eb;
-  background: #2563eb;
-  color: #ffffff;
+  border-color: var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  color: var(--text-btn-primary);
+}
+
+.btn.primary:hover:not(:disabled) {
+  opacity: 0.9;
 }
 
 .btn.small {
@@ -495,8 +566,8 @@ function lineIndexAtCursor(text, cursor) {
 }
 
 .btn.danger {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--btn-danger-border);
+  color: var(--btn-danger-text);
 }
 
 .btn.icon {
@@ -507,34 +578,36 @@ function lineIndexAtCursor(text, cursor) {
 .banner {
   padding: 10px 16px;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .banner.error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--bg-banner-error);
+  color: var(--text-error);
 }
 
 .banner.ok {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--bg-banner-ok);
+  color: var(--text-ok);
 }
 
 .loading {
   padding: 18px 16px;
   font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 240px 1fr;
   min-height: 0;
 }
 
 .sidebar {
-  border-right: 1px solid #e2e8f0;
-  background: #ffffff;
-  padding: 12px;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  padding: 16px 12px;
   overflow: auto;
 }
 
@@ -542,12 +615,15 @@ function lineIndexAtCursor(text, cursor) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .section-title {
   font-weight: 700;
   font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .group-item {
@@ -555,39 +631,45 @@ function lineIndexAtCursor(text, cursor) {
   grid-template-columns: 20px 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 2px;
 }
 
-.group-enable-spacer {
-  width: 20px;
+.group-item:hover {
+  background: var(--bg-main);
 }
 
 .group-item.active {
-  background: #eff6ff;
+  background: var(--bg-surface-active);
 }
 
 .group-name {
   font-size: 13px;
+  font-weight: 500;
 }
 
 .group-enable input {
   cursor: pointer;
+  accent-color: var(--btn-primary-bg);
 }
 
 .group-name-input {
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 4px 6px;
   font-size: 13px;
   width: 100%;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .group-name-input:focus {
   outline: none;
-  border-color: #93c5fd;
-  background: #ffffff;
+  border-color: var(--border-focus);
+  background: var(--bg-surface);
 }
 
 .group-move {
@@ -596,50 +678,49 @@ function lineIndexAtCursor(text, cursor) {
 }
 
 .main {
-  padding: 12px 16px;
+  padding: 16px 20px;
   overflow: auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg-main);
 }
 
 .main-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.entry-actions {
-  display: flex;
-  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .main-title {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .subhint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .editor {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  padding: 12px;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .editor-hint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -649,108 +730,74 @@ function lineIndexAtCursor(text, cursor) {
   box-sizing: border-box;
   min-height: 280px;
   resize: none;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  padding: 12px;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transition: border-color 0.2s;
 }
 
 .textarea:focus {
   outline: none;
-  border-color: #93c5fd;
+  border-color: var(--border-focus);
 }
 
-.table {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  overflow: hidden;
-  background: #ffffff;
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 70px 160px 1fr 1fr 160px 80px;
-  gap: 8px;
-  padding: 8px;
-  border-top: 1px solid #e2e8f0;
-  align-items: center;
-}
-
-.row.head {
-  border-top: none;
-  background: #f1f5f9;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.cell {
-  min-width: 0;
-}
-
-.cell.center {
-  display: flex;
-  justify-content: center;
-}
-
-.cell.right {
-  display: flex;
-  justify-content: flex-end;
+.textarea:read-only {
+  background: var(--bg-main);
+  color: var(--text-secondary);
 }
 
 .input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 6px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  padding: 6px 10px;
   font-size: 13px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
-.select {
-  width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 13px;
-  background: #ffffff;
-}
-
-.hint {
-  font-size: 12px;
-  color: #64748b;
+.input:focus {
+  outline: none;
+  border-color: var(--border-focus);
 }
 
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--bg-modal-mask);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  backdrop-filter: blur(2px);
 }
 
 .modal {
-  width: 520px;
+  width: 480px;
   max-width: 100%;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .modal-title {
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
 }
 
 .modal-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .modal-label {
@@ -758,6 +805,7 @@ function lineIndexAtCursor(text, cursor) {
   display: flex;
   align-items: center;
   gap: 6px;
+  color: var(--text-primary);
 }
 
 .modal-field {
@@ -771,14 +819,14 @@ function lineIndexAtCursor(text, cursor) {
 
 .modal-field-label {
   font-size: 12px;
-  color: #64748b;
-  margin-bottom: 4px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 10px;
+  margin-top: 20px;
 }
 </style>
