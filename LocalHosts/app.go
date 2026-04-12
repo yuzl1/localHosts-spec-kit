@@ -77,6 +77,7 @@ func (a *App) GetHosts() (hosts.HostWorkspace, error) {
 
 	return hosts.HostWorkspace{
 		ComposeEnabled:      state.ComposeEnabled,
+		Theme:               state.Theme,
 		Groups:              state.Groups,
 		Entries:             state.Entries,
 		ReadonlySystemLines: readonly,
@@ -103,6 +104,7 @@ func (a *App) SaveHosts(workspaceInput hosts.HostWorkspace) error {
 	state := hosts.WorkspaceState{
 		Version:        1,
 		ComposeEnabled: workspaceInput.ComposeEnabled,
+		Theme:          workspaceInput.Theme,
 		Groups:         workspaceInput.Groups,
 		Entries:        workspaceInput.Entries,
 	}

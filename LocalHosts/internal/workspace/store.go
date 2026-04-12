@@ -67,6 +67,7 @@ func defaultState() hosts.WorkspaceState {
 	return hosts.WorkspaceState{
 		Version:        1,
 		ComposeEnabled: true,
+		Theme:          "auto",
 		Groups: []hosts.HostGroup{
 			{
 				ID:      "default",
@@ -83,6 +84,10 @@ func defaultState() hosts.WorkspaceState {
 func normalizeState(state hosts.WorkspaceState) hosts.WorkspaceState {
 	if state.Version == 0 {
 		state.Version = 1
+	}
+
+	if state.Theme == "" {
+		state.Theme = "auto"
 	}
 
 	if len(state.Groups) == 0 {

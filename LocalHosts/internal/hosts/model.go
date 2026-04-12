@@ -21,6 +21,7 @@ type HostGroup struct {
 type WorkspaceState struct {
 	Version        int         `json:"version"`
 	ComposeEnabled bool        `json:"composeEnabled"`
+	Theme          string      `json:"theme"`
 	Groups         []HostGroup `json:"groups"`
 	Entries        []HostEntry `json:"entries"`
 	UpdatedAt      string      `json:"updatedAt"`
@@ -28,6 +29,7 @@ type WorkspaceState struct {
 
 type HostWorkspace struct {
 	ComposeEnabled      bool        `json:"composeEnabled"`
+	Theme               string      `json:"theme"`
 	Groups              []HostGroup `json:"groups"`
 	Entries             []HostEntry `json:"entries"`
 	ReadonlySystemLines []string    `json:"readonlySystemLines"`

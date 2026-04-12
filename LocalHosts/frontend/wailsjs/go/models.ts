@@ -46,6 +46,7 @@ export namespace hosts {
 	}
 	export class HostWorkspace {
 	    composeEnabled: boolean;
+	    theme: string;
 	    groups: HostGroup[];
 	    entries: HostEntry[];
 	    readonlySystemLines: string[];
@@ -58,6 +59,7 @@ export namespace hosts {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.composeEnabled = source["composeEnabled"];
+	        this.theme = source["theme"];
 	        this.groups = this.convertValues(source["groups"], HostGroup);
 	        this.entries = this.convertValues(source["entries"], HostEntry);
 	        this.readonlySystemLines = source["readonlySystemLines"];

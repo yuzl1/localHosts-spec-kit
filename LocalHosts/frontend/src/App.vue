@@ -11,6 +11,7 @@ const status = ref('')
 
 const workspace = reactive({
   composeEnabled: true,
+  theme: 'auto',
   groups: [],
   entries: [],
   readonlySystemLines: [],
@@ -42,6 +43,7 @@ function id() {
 function toPlainWorkspace() {
   return {
     composeEnabled: workspace.composeEnabled,
+    theme: workspace.theme,
     groups: workspace.groups.map((g) => ({ ...g })),
     entries: workspace.entries.map((e) => ({ ...e })),
     readonlySystemLines: [...workspace.readonlySystemLines],
@@ -56,6 +58,7 @@ async function refresh() {
   try {
     const data = await getHosts()
     workspace.composeEnabled = !!data.composeEnabled
+    workspace.theme = data.theme || 'auto'
     workspace.groups = data.groups || []
     workspace.entries = data.entries || []
     workspace.readonlySystemLines = data.readonlySystemLines || []
@@ -341,10 +344,15 @@ function lineIndexAtCursor(text, cursor) {
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" :data-theme="workspace.theme">
     <header class="header">
       <div class="title">LocalHosts</div>
       <div class="actions">
+        <select class="select small" v-model="workspace.theme" @change="scheduleSave" style="width: auto; padding: 4px 8px; margin-right: 10px;">
+          <option value="auto">跟随系统</option>
+          <option value="light">浅色模式</option>
+          <option value="dark">深色模式</option>
+        </select>
         <label class="toggle">
           <input type="checkbox" :disabled="!authorized" v-model="workspace.composeEnabled" @change="scheduleSave" />
           <span>按分组组装</span>
@@ -471,8 +479,34 @@ function lineIndexAtCursor(text, cursor) {
   transition: background-color 0.3s, color 0.3s;
 }
 
+.app[data-theme="dark"] {
+  --bg-main: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-surface-active: #334155;
+  --bg-banner-ok: #064e3b;
+  --bg-banner-error: #7f1d1d;
+  --bg-modal-mask: rgba(0, 0, 0, 0.6);
+  --bg-table-head: #1e293b;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-ok: #a7f3d0;
+  --text-error: #fca5a5;
+  --text-btn-primary: #ffffff;
+  
+  --border-color: #334155;
+  --border-input: #475569;
+  --border-focus: #3b82f6;
+  
+  --btn-bg: #1e293b;
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-border: #3b82f6;
+  --btn-danger-border: #f87171;
+  --btn-danger-text: #f87171;
+}
+
 @media (prefers-color-scheme: dark) {
-  .app {
+  .app[data-theme="auto"] {
     --bg-main: #0f172a;
     --bg-surface: #1e293b;
     --bg-surface-active: #334155;
