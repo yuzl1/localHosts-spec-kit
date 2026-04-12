@@ -348,11 +348,14 @@ function lineIndexAtCursor(text, cursor) {
     <header class="header">
       <div class="title">LocalHosts</div>
       <div class="actions">
-        <select class="select small" v-model="workspace.theme" @change="scheduleSave" style="width: auto; padding: 4px 8px; margin-right: 10px;">
-          <option value="auto">跟随系统</option>
-          <option value="light">浅色模式</option>
-          <option value="dark">深色模式</option>
-        </select>
+        <div class="theme-select">
+          <select class="theme-native" v-model="workspace.theme" @change="scheduleSave">
+            <option value="auto">跟随系统</option>
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+          </select>
+          <div class="theme-arrow">▾</div>
+        </div>
         <label class="toggle">
           <input type="checkbox" :disabled="!authorized" v-model="workspace.composeEnabled" @change="scheduleSave" />
           <span>按分组组装</span>
@@ -561,6 +564,48 @@ function lineIndexAtCursor(text, cursor) {
   gap: 6px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.theme-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.theme-select:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.theme-native {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding-right: 18px;
+  cursor: pointer;
+  outline: none;
+}
+
+.theme-arrow {
+  position: absolute;
+  right: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  transform: translateY(-1px);
 }
 
 .btn {
