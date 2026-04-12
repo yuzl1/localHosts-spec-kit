@@ -82,6 +82,12 @@ jobs:
             librsvg2-dev \
             patchelf
 
+      - name: Install NSIS (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+
       - name: Install frontend deps
         run: pnpm install --frozen-lockfile
         working-directory: LocalHosts/frontend
@@ -90,7 +96,12 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Build
+        if: runner.os != 'Windows'
         run: wails build -clean -platform "${{ matrix.platform }}"
+
+      - name: Build (NSIS)
+        if: runner.os == 'Windows'
+        run: wails build -clean -platform "${{ matrix.platform }}" -nsis
 
       - name: Package artifact (macOS)
         if: runner.os == 'macOS'
@@ -115,12 +126,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (Test-Path "build\\bin") {
-            $out = "build\\bin\\LocalHosts-${{ matrix.artifact }}.zip"
-            Compress-Archive -Path "build\\bin\\*" -DestinationPath $out -Force
-          } else {
-            throw "build\\bin not found"
+          if (!(Test-Path "build\\bin")) { throw "build\\bin not found" }
+          $bin = "build\\bin"
+          $candidates = Get-ChildItem $bin -Filter "*.exe" | Where-Object { $_.Name -notmatch '^LocalHosts\.exe$' } | Sort-Object LastWriteTime -Descending
+          if ($candidates.Count -eq 0) {
+            $candidates = Get-ChildItem $bin -Filter "*.exe" | Sort-Object LastWriteTime -Descending
           }
+          if ($candidates.Count -eq 0) { throw "No .exe found in build\\bin" }
+          $installer = $candidates[0]
+          Copy-Item $installer.FullName (Join-Path $bin "LocalHosts-${{ matrix.artifact }}-setup.exe") -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -130,6 +144,7 @@ jobs:
             LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}.zip
             LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}.dmg
             LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}.tar.gz
+            LocalHosts/build/bin/LocalHosts-${{ matrix.artifact }}-setup.exe
           if-no-files-found: error
 
   release:
