@@ -57,6 +57,9 @@ jobs:
           cache-dependency-path: |
             LocalHosts/go.sum
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -64,9 +67,6 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: |
             LocalHosts/frontend/pnpm-lock.yaml
-
-      - name: Enable Corepack
-        run: corepack enable
 
       - name: Install Linux deps
         if: runner.os == 'Linux'
