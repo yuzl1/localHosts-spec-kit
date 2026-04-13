@@ -14,14 +14,14 @@ func EmitProgress(ctx context.Context, p Progress) {
 	wailsruntime.EventsEmit(ctx, ProgressEventName, p)
 }
 
-func CheckForUpdate(ctx context.Context, owner string, repo string, currentVersion string, proxyPrefix string) (Info, error) {
+func CheckForUpdate(ctx context.Context, owner string, repo string, currentVersion string, proxyType string, proxyHost string, proxyPort int) (Info, error) {
 	cv, err := NormalizeSemverString(currentVersion)
 	if err != nil {
 		return Info{}, err
 	}
 
 	EmitProgress(ctx, Progress{Stage: "checking", Message: "checking for updates"})
-	rel, err := FetchLatestGitHubReleaseWithProxy(ctx, owner, repo, proxyPrefix)
+	rel, err := FetchLatestGitHubReleaseWithProxy(ctx, owner, repo, proxyType, proxyHost, proxyPort)
 	if err != nil {
 		EmitProgress(ctx, Progress{Stage: "error", Message: "check failed"})
 		return Info{}, err

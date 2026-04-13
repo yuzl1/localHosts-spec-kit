@@ -65,11 +65,13 @@ func Save(state hosts.WorkspaceState) (string, error) {
 
 func defaultState() hosts.WorkspaceState {
 	return hosts.WorkspaceState{
-		Version:            2,
+		Version:            3,
 		ComposeEnabled:     true,
 		Theme:              "auto",
 		AutoCheckOnStartup: true,
-		UpdateProxyPrefix:  "",
+		UpdateProxyType:    "",
+		UpdateProxyHost:    "",
+		UpdateProxyPort:    0,
 		Groups: []hosts.HostGroup{
 			{
 				ID:      "default",
@@ -90,8 +92,14 @@ func normalizeState(state hosts.WorkspaceState) hosts.WorkspaceState {
 
 	if state.Version < 2 {
 		state.AutoCheckOnStartup = true
-		state.UpdateProxyPrefix = ""
 		state.Version = 2
+	}
+
+	if state.Version < 3 {
+		state.UpdateProxyType = ""
+		state.UpdateProxyHost = ""
+		state.UpdateProxyPort = 0
+		state.Version = 3
 	}
 
 	if state.Theme == "" {

@@ -19,7 +19,7 @@ type App struct {
 	ctx context.Context
 }
 
-var appVersion = "0.0.4"
+var appVersion = "0.0.5"
 
 // NewApp creates a new App application struct
 func NewApp() *App {
@@ -109,7 +109,7 @@ func (a *App) SaveHosts(workspaceInput hosts.HostWorkspace) error {
 	if err != nil {
 		return err
 	}
-	state.Version = 2
+	state.Version = 3
 	state.ComposeEnabled = workspaceInput.ComposeEnabled
 	state.Theme = workspaceInput.Theme
 	state.Groups = workspaceInput.Groups
@@ -158,7 +158,9 @@ func (a *App) GetUpdateSettings() (update.Settings, error) {
 	}
 	return update.Settings{
 		AutoCheckOnStartup: state.AutoCheckOnStartup,
-		ProxyPrefix:        state.UpdateProxyPrefix,
+		ProxyType:          state.UpdateProxyType,
+		ProxyHost:          state.UpdateProxyHost,
+		ProxyPort:          state.UpdateProxyPort,
 	}, nil
 }
 
@@ -169,8 +171,10 @@ func (a *App) SaveUpdateSettings(settings update.Settings) error {
 		return err
 	}
 	state.AutoCheckOnStartup = settings.AutoCheckOnStartup
-	state.UpdateProxyPrefix = strings.TrimSpace(settings.ProxyPrefix)
-	state.Version = 2
+	state.UpdateProxyType = strings.TrimSpace(settings.ProxyType)
+	state.UpdateProxyHost = strings.TrimSpace(settings.ProxyHost)
+	state.UpdateProxyPort = settings.ProxyPort
+	state.Version = 3
 	_, err = workspace.Save(state)
 	return err
 }
@@ -181,7 +185,7 @@ func (a *App) CheckForUpdate() (update.Info, error) {
 	if err != nil {
 		return update.Info{}, err
 	}
-	return update.CheckForUpdate(a.ctx, "yuzl1", "localHosts-spec-kit", appVersion, state.UpdateProxyPrefix)
+	return update.CheckForUpdate(a.ctx, "yuzl1", "localHosts-spec-kit", appVersion, state.UpdateProxyType, state.UpdateProxyHost, state.UpdateProxyPort)
 }
 
 // DownloadUpdate downloads the installer for a given update info and returns the local path.
@@ -193,7 +197,7 @@ func (a *App) DownloadUpdate(info update.Info) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return update.DownloadInstaller(a.ctx, info.AssetURL, info.AssetName, info.AssetSize, state.UpdateProxyPrefix)
+	return update.DownloadInstaller(a.ctx, info.AssetURL, info.AssetName, info.AssetSize, state.UpdateProxyType, state.UpdateProxyHost, state.UpdateProxyPort)
 }
 
 // InstallUpdate starts the installer and quits the application.

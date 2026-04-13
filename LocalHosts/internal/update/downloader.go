@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func DownloadInstaller(ctx context.Context, url string, filename string, expectedSize int64, proxyPrefix string) (string, error) {
+func DownloadInstaller(ctx context.Context, url string, filename string, expectedSize int64, proxyType string, proxyHost string, proxyPort int) (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
@@ -27,20 +27,7 @@ func DownloadInstaller(ctx context.Context, url string, filename string, expecte
 
 	EmitProgress(ctx, Progress{Stage: "downloading", Message: "starting download"})
 
-	url = applyProxyPrefix(url, proxyPrefix)
-
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   15 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 30 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		ForceAttemptHTTP2:     true,
-	}
-	client := http.Client{Transport: transport}
+	client := http.Client{Transport: newTransport(proxyType, proxyHost, proxyPort)}
 
 	var resp *http.Response
 	var lastErr error

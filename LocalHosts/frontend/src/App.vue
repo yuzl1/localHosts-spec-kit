@@ -29,7 +29,9 @@ const updateBusy = ref(false)
 const updateError = ref('')
 const updateBannerText = ref('')
 const autoCheckOnStartup = ref(true)
-const updateProxyPrefix = ref('')
+const updateProxyType = ref('')
+const updateProxyHost = ref('')
+const updateProxyPort = ref('')
 const updateProgress = reactive({
   stage: 'idle',
   downloadedBytes: 0,
@@ -77,16 +79,26 @@ async function loadUpdateSettings() {
   try {
     const settings = await getUpdateSettings()
     autoCheckOnStartup.value = settings?.autoCheckOnStartup !== false
-    updateProxyPrefix.value = settings?.proxyPrefix || ''
+    updateProxyType.value = settings?.proxyType || ''
+    updateProxyHost.value = settings?.proxyHost || ''
+    updateProxyPort.value = settings?.proxyPort ? String(settings.proxyPort) : ''
   } catch (_) {
     autoCheckOnStartup.value = true
-    updateProxyPrefix.value = ''
+    updateProxyType.value = ''
+    updateProxyHost.value = ''
+    updateProxyPort.value = ''
   }
 }
 
 async function persistUpdateSettings() {
   try {
-    await saveUpdateSettings({ autoCheckOnStartup: !!autoCheckOnStartup.value, proxyPrefix: updateProxyPrefix.value || '' })
+    const port = Number(updateProxyPort.value)
+    await saveUpdateSettings({
+      autoCheckOnStartup: !!autoCheckOnStartup.value,
+      proxyType: updateProxyType.value || '',
+      proxyHost: updateProxyHost.value || '',
+      proxyPort: Number.isFinite(port) ? port : 0
+    })
   } catch (e) {
     updateError.value = String(e)
   }
@@ -618,14 +630,17 @@ function lineIndexAtCursor(text, cursor) {
 
         <div class="modal-row">
           <div class="modal-field full">
-            <div class="modal-field-label">下载代理前缀（可选）</div>
-            <input
-              class="input"
-              v-model="updateProxyPrefix"
-              @change="persistUpdateSettings"
-              placeholder="例如：https://ghproxy.com/{url} 或 https://ghproxy.com/"
-            />
-            <div class="subhint">用于解决 GitHub 下载超时；留空则直连</div>
+            <div class="modal-field-label">下载代理（可选）</div>
+            <div class="proxy-grid">
+              <select class="input" v-model="updateProxyType" @change="persistUpdateSettings">
+                <option value="">直连</option>
+                <option value="http">HTTP</option>
+                <option value="socks5">SOCKS5</option>
+              </select>
+              <input class="input" v-model="updateProxyHost" @change="persistUpdateSettings" placeholder="IP/域名" />
+              <input class="input" v-model="updateProxyPort" @change="persistUpdateSettings" placeholder="端口" inputmode="numeric" />
+            </div>
+            <div class="subhint">用于解决 GitHub 下载超时；支持 HTTP 与 SOCKS5（socket）代理</div>
           </div>
         </div>
 
@@ -895,6 +910,13 @@ function lineIndexAtCursor(text, cursor) {
   font-size: 13px;
   color: var(--text-primary);
   padding-top: 6px;
+}
+
+.proxy-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr 90px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .progress {

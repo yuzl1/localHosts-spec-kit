@@ -2,7 +2,9 @@ package update
 
 type Settings struct {
 	AutoCheckOnStartup bool   `json:"autoCheckOnStartup"`
-	ProxyPrefix        string `json:"proxyPrefix"`
+	ProxyType          string `json:"proxyType"`
+	ProxyHost          string `json:"proxyHost"`
+	ProxyPort          int    `json:"proxyPort"`
 }
 
 type Info struct {
