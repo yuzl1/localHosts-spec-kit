@@ -21,6 +21,7 @@ const authorizing = ref(false)
 const authorized = ref(false)
 const error = ref('')
 const status = ref('')
+const appVersion = ref('')
 
 const updateModalOpen = ref(false)
 const updateInfo = ref(null)
@@ -99,6 +100,15 @@ async function loadUpdateSettings() {
     updateProxyType.value = ''
     updateProxyHost.value = ''
     updateProxyPort.value = ''
+  }
+}
+
+async function loadAppVersion() {
+  try {
+    const v = await getAppVersion()
+    appVersion.value = String(v || '')
+  } catch (_) {
+    appVersion.value = ''
   }
 }
 
@@ -419,6 +429,8 @@ function moveGroup(groupId, direction) {
 }
 
 onMounted(() => {
+  loadAppVersion()
+
   EventsOn('update:progress', (p) => {
     if (!p) return
     updateProgress.stage = p.stage || updateProgress.stage
@@ -554,6 +566,14 @@ function lineIndexAtCursor(text, cursor) {
 
     <div v-else class="layout">
       <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-logo">LH</div>
+          <div class="brand-meta">
+            <div class="brand-name">LocalHosts</div>
+            <div class="brand-version">v{{ appVersion || '-' }}</div>
+          </div>
+        </div>
+
         <div class="sidebar-header">
           <div class="section-title">分组</div>
           <button class="btn small" :disabled="!authorized" @click="addGroup">新增分组</button>
@@ -997,6 +1017,49 @@ function lineIndexAtCursor(text, cursor) {
   background: var(--bg-surface);
   padding: 16px 12px;
   overflow: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 4px 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-active);
+  color: var(--text-primary);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.brand-meta {
+  min-width: 0;
+}
+
+.brand-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.brand-version {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-header {
