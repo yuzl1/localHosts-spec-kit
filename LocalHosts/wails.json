@@ -9,8 +9,12 @@
   "info": {
     "companyName": "yuzl",
     "productName": "LocalHosts",
-    "productVersion": "0.0.21",
-    "comments": "Built using Wails (https://wails.io)"
+    "productVersion": "0.0.22",
+    "fileDescription": "LocalHosts - Lightweight Hosts Management Tool",
+    "internalName": "LocalHosts",
+    "originalFilename": "LocalHosts.exe",
+    "legalCopyright": "Copyright (c) 2026 yuzl. All rights reserved.",
+    "comments": "Open source, free hosts management tool. Built with Wails."
   },
   "author": {
     "name": "yuzl",
