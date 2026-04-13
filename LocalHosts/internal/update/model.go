@@ -1,7 +1,8 @@
 package update
 
 type Settings struct {
-	AutoCheckOnStartup bool `json:"autoCheckOnStartup"`
+	AutoCheckOnStartup bool   `json:"autoCheckOnStartup"`
+	ProxyPrefix        string `json:"proxyPrefix"`
 }
 
 type Info struct {

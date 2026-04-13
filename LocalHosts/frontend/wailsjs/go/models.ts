@@ -117,6 +117,7 @@ export namespace update {
 	}
 	export class Settings {
 	    autoCheckOnStartup: boolean;
+	    proxyPrefix: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -125,6 +126,7 @@ export namespace update {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.autoCheckOnStartup = source["autoCheckOnStartup"];
+	        this.proxyPrefix = source["proxyPrefix"];
 	    }
 	}
 

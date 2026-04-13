@@ -69,6 +69,7 @@ func defaultState() hosts.WorkspaceState {
 		ComposeEnabled:     true,
 		Theme:              "auto",
 		AutoCheckOnStartup: true,
+		UpdateProxyPrefix:  "",
 		Groups: []hosts.HostGroup{
 			{
 				ID:      "default",
@@ -89,6 +90,7 @@ func normalizeState(state hosts.WorkspaceState) hosts.WorkspaceState {
 
 	if state.Version < 2 {
 		state.AutoCheckOnStartup = true
+		state.UpdateProxyPrefix = ""
 		state.Version = 2
 	}
 

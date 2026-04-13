@@ -24,7 +24,12 @@ type GitHubRelease struct {
 }
 
 func FetchLatestGitHubRelease(ctx context.Context, owner string, repo string) (GitHubRelease, error) {
+	return FetchLatestGitHubReleaseWithProxy(ctx, owner, repo, "")
+}
+
+func FetchLatestGitHubReleaseWithProxy(ctx context.Context, owner string, repo string, proxyPrefix string) (GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
+	url = applyProxyPrefix(url, proxyPrefix)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return GitHubRelease{}, err
@@ -32,10 +37,10 @@ func FetchLatestGitHubRelease(ctx context.Context, owner string, repo string) (G
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "LocalHosts")
 
-	client := http.Client{Timeout: 10 * time.Second}
+	client := http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return GitHubRelease{}, err
+		return GitHubRelease{}, fmt.Errorf("UPDATE_CHECK_FAILED: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -56,4 +61,15 @@ func FetchLatestGitHubRelease(ctx context.Context, owner string, repo string) (G
 		return GitHubRelease{}, fmt.Errorf("UPDATE_CHECK_FAILED: %s", string(raw))
 	}
 	return out, nil
+}
+
+func applyProxyPrefix(url string, proxyPrefix string) string {
+	p := strings.TrimSpace(proxyPrefix)
+	if p == "" {
+		return url
+	}
+	if strings.Contains(p, "{url}") {
+		return strings.ReplaceAll(p, "{url}", url)
+	}
+	return p + url
 }

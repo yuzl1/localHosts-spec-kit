@@ -29,6 +29,7 @@ const updateBusy = ref(false)
 const updateError = ref('')
 const updateBannerText = ref('')
 const autoCheckOnStartup = ref(true)
+const updateProxyPrefix = ref('')
 const updateProgress = reactive({
   stage: 'idle',
   downloadedBytes: 0,
@@ -76,14 +77,16 @@ async function loadUpdateSettings() {
   try {
     const settings = await getUpdateSettings()
     autoCheckOnStartup.value = settings?.autoCheckOnStartup !== false
+    updateProxyPrefix.value = settings?.proxyPrefix || ''
   } catch (_) {
     autoCheckOnStartup.value = true
+    updateProxyPrefix.value = ''
   }
 }
 
 async function persistUpdateSettings() {
   try {
-    await saveUpdateSettings({ autoCheckOnStartup: !!autoCheckOnStartup.value })
+    await saveUpdateSettings({ autoCheckOnStartup: !!autoCheckOnStartup.value, proxyPrefix: updateProxyPrefix.value || '' })
   } catch (e) {
     updateError.value = String(e)
   }
@@ -610,6 +613,19 @@ function lineIndexAtCursor(text, cursor) {
           <div class="modal-field">
             <div class="modal-field-label">最新版本</div>
             <div class="modal-text">{{ updateInfo?.latestVersion || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="modal-row">
+          <div class="modal-field full">
+            <div class="modal-field-label">下载代理前缀（可选）</div>
+            <input
+              class="input"
+              v-model="updateProxyPrefix"
+              @change="persistUpdateSettings"
+              placeholder="例如：https://ghproxy.com/{url} 或 https://ghproxy.com/"
+            />
+            <div class="subhint">用于解决 GitHub 下载超时；留空则直连</div>
           </div>
         </div>
 

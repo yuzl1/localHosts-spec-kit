@@ -19,7 +19,7 @@ type App struct {
 	ctx context.Context
 }
 
-var appVersion = "0.0.3"
+var appVersion = "0.0.4"
 
 // NewApp creates a new App application struct
 func NewApp() *App {
@@ -156,7 +156,10 @@ func (a *App) GetUpdateSettings() (update.Settings, error) {
 	if err != nil {
 		return update.Settings{}, err
 	}
-	return update.Settings{AutoCheckOnStartup: state.AutoCheckOnStartup}, nil
+	return update.Settings{
+		AutoCheckOnStartup: state.AutoCheckOnStartup,
+		ProxyPrefix:        state.UpdateProxyPrefix,
+	}, nil
 }
 
 // SaveUpdateSettings persists update settings to the user workspace.
@@ -166,6 +169,7 @@ func (a *App) SaveUpdateSettings(settings update.Settings) error {
 		return err
 	}
 	state.AutoCheckOnStartup = settings.AutoCheckOnStartup
+	state.UpdateProxyPrefix = strings.TrimSpace(settings.ProxyPrefix)
 	state.Version = 2
 	_, err = workspace.Save(state)
 	return err
@@ -173,7 +177,11 @@ func (a *App) SaveUpdateSettings(settings update.Settings) error {
 
 // CheckForUpdate checks remote release metadata and returns update info.
 func (a *App) CheckForUpdate() (update.Info, error) {
-	return update.CheckForUpdate(a.ctx, "yuzl1", "localHosts-spec-kit", appVersion)
+	state, _, _, err := workspace.LoadOrInit()
+	if err != nil {
+		return update.Info{}, err
+	}
+	return update.CheckForUpdate(a.ctx, "yuzl1", "localHosts-spec-kit", appVersion, state.UpdateProxyPrefix)
 }
 
 // DownloadUpdate downloads the installer for a given update info and returns the local path.
@@ -181,7 +189,11 @@ func (a *App) DownloadUpdate(info update.Info) (string, error) {
 	if strings.TrimSpace(info.AssetURL) == "" || strings.TrimSpace(info.AssetName) == "" {
 		return "", os.ErrInvalid
 	}
-	return update.DownloadInstaller(a.ctx, info.AssetURL, info.AssetName, info.AssetSize)
+	state, _, _, err := workspace.LoadOrInit()
+	if err != nil {
+		return "", err
+	}
+	return update.DownloadInstaller(a.ctx, info.AssetURL, info.AssetName, info.AssetSize, state.UpdateProxyPrefix)
 }
 
 // InstallUpdate starts the installer and quits the application.

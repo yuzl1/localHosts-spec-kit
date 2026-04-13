@@ -23,6 +23,7 @@ type WorkspaceState struct {
 	ComposeEnabled     bool        `json:"composeEnabled"`
 	Theme              string      `json:"theme"`
 	AutoCheckOnStartup bool        `json:"autoCheckOnStartup"`
+	UpdateProxyPrefix  string      `json:"updateProxyPrefix"`
 	Groups             []HostGroup `json:"groups"`
 	Entries            []HostEntry `json:"entries"`
 	UpdatedAt          string      `json:"updatedAt"`
