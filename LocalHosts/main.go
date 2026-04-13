@@ -78,6 +78,7 @@ func runUpdateApplyIfNeeded() bool {
 		line := time.Now().Format(time.RFC3339) + " " + msg + "\n"
 		f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to open update log file: %v\n", err)
 			return
 		}
 		_, _ = f.WriteString(line)
@@ -112,7 +113,7 @@ func runUpdateApplyIfNeeded() bool {
 	if isWin {
 		// On Windows, s is the setup.exe, we just run it and exit
 		appendLog("windows: running setup.exe")
-		cmd := exec.Command("cmd", "/c", "start", "", s)
+		cmd := exec.Command(s)
 		if err := cmd.Start(); err != nil {
 			appendLog("start setup failed: " + err.Error())
 			os.Exit(1)
