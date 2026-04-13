@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 )
 
 func InstallUpdate(ctx context.Context, installerPath string) error {
