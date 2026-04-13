@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -74,6 +73,17 @@ func runUpdateApplyIfNeeded() bool {
 		os.Exit(2)
 	}
 
+	logPath := "/tmp/LocalHosts-update-apply.log"
+	appendLog := func(msg string) {
+		line := time.Now().Format(time.RFC3339) + " " + msg + "\n"
+		f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+		if err != nil {
+			return
+		}
+		_, _ = f.WriteString(line)
+		_ = f.Close()
+	}
+
 	deadline := time.Now().Add(2 * time.Minute)
 	for time.Now().Before(deadline) {
 		if !processAlive(*pid) {
@@ -85,31 +95,53 @@ func runUpdateApplyIfNeeded() bool {
 	t := strings.TrimSpace(*target)
 	s := strings.TrimSpace(*src)
 	needsAdmin := strings.HasPrefix(t, "/Applications/")
-	tmp := t + ".tmp"
-	_ = os.RemoveAll(tmp)
+	newPath := t + ".new"
+	backupPath := t + ".bak"
+	_ = os.RemoveAll(newPath)
+
+	appendLog("start target=" + t + " src=" + s)
 
 	if needsAdmin {
 		cmdString := strings.Join([]string{
-			"rm -rf " + shQuote(tmp),
-			"ditto " + shQuote(s) + " " + shQuote(tmp),
-			"rm -rf " + shQuote(t),
-			"mv " + shQuote(tmp) + " " + shQuote(t),
-		}, " && ")
+			`TARGET=` + shQuote(t),
+			`SRC=` + shQuote(s),
+			`NEW=` + shQuote(newPath),
+			`BAK=` + shQuote(backupPath),
+			`/bin/rm -rf "$NEW" "$BAK"`,
+			`/usr/bin/ditto "$SRC" "$NEW"`,
+			`/usr/bin/xattr -dr com.apple.quarantine "$NEW" >/dev/null 2>&1 || true`,
+			`if [ -d "$TARGET" ]; then /bin/mv "$TARGET" "$BAK"; fi`,
+			`/bin/mv "$NEW" "$TARGET" || ( [ -d "$BAK" ] && /bin/mv "$BAK" "$TARGET" ; exit 1 )`,
+			`/usr/bin/open -n "$TARGET"`,
+		}, " ; ")
 
 		script := fmt.Sprintf(`do shell script "%s" with administrator privileges`, escapeOsaString(cmdString))
 		cmd := exec.Command("osascript", "-e", script)
-		cmd.Stdout = io.Discard
-		cmd.Stderr = io.Discard
-		_ = cmd.Run()
-		_ = exec.Command("open", t).Start()
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			appendLog("osascript failed: " + strings.TrimSpace(string(out)))
+			os.Exit(1)
+		}
+		appendLog("osascript ok")
 		os.Exit(0)
 	}
 
-	if err := exec.Command("ditto", s, tmp).Run(); err == nil {
-		_ = os.RemoveAll(t)
-		_ = os.Rename(tmp, t)
-		_ = exec.Command("open", t).Start()
+	if err := exec.Command("/usr/bin/ditto", s, newPath).Run(); err != nil {
+		appendLog("ditto failed: " + err.Error())
+		os.Exit(1)
 	}
+	_ = exec.Command("/usr/bin/xattr", "-dr", "com.apple.quarantine", newPath).Run()
+	_ = os.RemoveAll(backupPath)
+	if err := os.Rename(t, backupPath); err != nil {
+		appendLog("backup failed: " + err.Error())
+	}
+	if err := os.Rename(newPath, t); err != nil {
+		appendLog("move new failed: " + err.Error())
+		_ = os.Rename(backupPath, t)
+		os.Exit(1)
+	}
+	_ = exec.Command("/usr/bin/open", "-n", t).Start()
+	appendLog("done")
 	os.Exit(0)
 	return true
 }
