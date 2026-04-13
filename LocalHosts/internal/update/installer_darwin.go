@@ -22,12 +22,6 @@ func InstallUpdate(ctx context.Context, installerPath string) error {
 		return err
 	}
 
-	exePath, err := os.Executable()
-	if err != nil {
-		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
-		return err
-	}
-
 	extractDir, err := os.MkdirTemp("", "LocalHosts-update-*")
 	if err != nil {
 		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
@@ -40,43 +34,54 @@ func InstallUpdate(ctx context.Context, installerPath string) error {
 		return err
 	}
 
-	updaterPath := filepath.Join(os.TempDir(), "LocalHosts-updater-bin")
-	_ = os.Remove(updaterPath)
-	if err := copyFile(exePath, updaterPath); err != nil {
+	// Create shell script for update
+	scriptPath := filepath.Join(os.TempDir(), "LocalHosts-updater.sh")
+	logPath := "/tmp/LocalHosts-update.log"
+	
+	script := fmt.Sprintf(`#!/bin/bash
+(
+  echo "--- Start Update $(date) ---"
+  echo "PID: %d"
+  echo "Target: %s"
+  echo "Src: %s"
+  
+  # Wait for main process to exit
+  while kill -0 %d 2>/dev/null; do
+    sleep 0.5
+  done
+  
+  # Perform replacement
+  rm -rf %s
+  mv %s %s
+  
+  # Clean quarantine
+  xattr -dr com.apple.quarantine %s >/dev/null 2>&1 || true
+  
+  # Reopen
+  open -n %s
+  echo "--- Done ---"
+) >> %s 2>&1 &
+`, os.Getpid(), appPath, newAppPath, os.Getpid(), 
+shQuote(appPath), shQuote(newAppPath), shQuote(appPath), shQuote(appPath), shQuote(appPath), logPath)
+
+	if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
 		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
 		return err
 	}
 
-	cmd := exec.Command(updaterPath,
-		"--update-apply",
-		"--pid", fmt.Sprintf("%d", os.Getpid()),
-		"--target", appPath,
-		"--src", newAppPath,
-	)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	cmd := exec.Command("/bin/bash", scriptPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
 		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
 		return err
 	}
+
 	EmitProgress(ctx, Progress{Stage: "done", Message: "update scheduled"})
 	return nil
 }
 
-func copyFile(src, dst string) error {
-	s, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-	d, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	_, err = io.Copy(d, s)
-	return err
+func shQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
 func currentAppBundlePath() (string, error) {
