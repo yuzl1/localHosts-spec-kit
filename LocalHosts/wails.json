@@ -6,6 +6,12 @@
   "frontend:build": "pnpm run build",
   "frontend:dev:watcher": "pnpm run dev",
   "frontend:dev:serverUrl": "auto",
+  "info": {
+    "companyName": "yuzl",
+    "productName": "LocalHosts",
+    "productVersion": "0.0.1",
+    "comments": "Built using Wails (https://wails.io)"
+  },
   "author": {
     "name": "yuzl",
     "email": "yuzl6@foxmail.com"
