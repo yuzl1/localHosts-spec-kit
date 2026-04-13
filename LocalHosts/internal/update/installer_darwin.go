@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 )
 
 func InstallUpdate(ctx context.Context, installerPath string) error {
@@ -41,10 +40,14 @@ func InstallUpdate(ctx context.Context, installerPath string) error {
 		return err
 	}
 
-	runCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-	defer cancel()
+	updaterPath := filepath.Join(os.TempDir(), "LocalHosts-updater-bin")
+	_ = os.Remove(updaterPath)
+	if err := copyFile(exePath, updaterPath); err != nil {
+		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
+		return err
+	}
 
-	cmd := exec.CommandContext(runCtx, exePath,
+	cmd := exec.Command(updaterPath,
 		"--update-apply",
 		"--pid", fmt.Sprintf("%d", os.Getpid()),
 		"--target", appPath,
@@ -52,13 +55,28 @@ func InstallUpdate(ctx context.Context, installerPath string) error {
 	)
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
 		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
 		return err
 	}
 	EmitProgress(ctx, Progress{Stage: "done", Message: "update scheduled"})
 	return nil
+}
+
+func copyFile(src, dst string) error {
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	d, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	_, err = io.Copy(d, s)
+	return err
 }
 
 func currentAppBundlePath() (string, error) {

@@ -19,7 +19,7 @@ type App struct {
 	ctx context.Context
 }
 
-var appVersion = "0.0.12"
+var appVersion = "0.0.13"
 
 // NewApp creates a new App application struct
 func NewApp() *App {
