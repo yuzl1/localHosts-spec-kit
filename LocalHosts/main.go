@@ -94,12 +94,32 @@ func runUpdateApplyIfNeeded() bool {
 
 	t := strings.TrimSpace(*target)
 	s := strings.TrimSpace(*src)
-	needsAdmin := strings.HasPrefix(t, "/Applications/")
+	isWin := runtime.GOOS == "windows"
+	needsAdmin := !isWin && strings.HasPrefix(t, "/Applications/")
+
 	newPath := t + ".new"
+	if isWin {
+		newPath = t + ".new.exe"
+	}
 	backupPath := t + ".bak"
+	if isWin {
+		backupPath = t + ".bak.exe"
+	}
 	_ = os.RemoveAll(newPath)
 
 	appendLog("start target=" + t + " src=" + s)
+
+	if isWin {
+		// On Windows, s is the setup.exe, we just run it and exit
+		appendLog("windows: running setup.exe")
+		cmd := exec.Command("cmd", "/c", "start", "", s)
+		if err := cmd.Start(); err != nil {
+			appendLog("start setup failed: " + err.Error())
+			os.Exit(1)
+		}
+		appendLog("setup started, exiting")
+		os.Exit(0)
+	}
 
 	if needsAdmin {
 		cmdString := strings.Join([]string{
