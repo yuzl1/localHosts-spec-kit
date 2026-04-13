@@ -9,10 +9,7 @@
   "info": {
     "companyName": "yuzl",
     "productName": "LocalHosts",
-    "productVersion": "0.0.20",
-    "nsis": {
-      "installername": "LocalHosts Installer.exe"
-    },
+    "productVersion": "0.0.21",
     "comments": "Built using Wails (https://wails.io)"
   },
   "author": {
