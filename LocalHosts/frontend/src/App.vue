@@ -988,7 +988,7 @@ function lineIndexAtCursor(text, cursor) {
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 300px 1fr;
   min-height: 0;
 }
 
@@ -1037,6 +1037,9 @@ function lineIndexAtCursor(text, cursor) {
 .group-name {
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .group-enable input {
