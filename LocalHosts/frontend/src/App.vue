@@ -320,9 +320,18 @@ function isValidIP(ip) {
 }
 
 function formatApplyError(raw) {
-  if (raw.startsWith('CANCELLED:')) return '已取消授权，系统 hosts 未修改'
-  if (raw.startsWith('PERMISSION_DENIED:')) return '权限不足，系统 hosts 未修改'
-  if (raw.startsWith('WRITE_FAILED:')) return '写入失败，系统 hosts 未修改或已尝试回滚'
+  if (raw.startsWith('CANCELLED:')) {
+    const msg = raw.slice('CANCELLED:'.length).trim()
+    return msg ? `已取消授权（${msg}），系统 hosts 未修改` : '已取消授权，系统 hosts 未修改'
+  }
+  if (raw.startsWith('PERMISSION_DENIED:')) {
+    const msg = raw.slice('PERMISSION_DENIED:'.length).trim()
+    return msg ? `权限不足（${msg}），系统 hosts 未修改` : '权限不足，系统 hosts 未修改'
+  }
+  if (raw.startsWith('WRITE_FAILED:')) {
+    const msg = raw.slice('WRITE_FAILED:'.length).trim()
+    return msg ? `写入失败（${msg}），系统 hosts 未修改或已尝试回滚` : '写入失败，系统 hosts 未修改或已尝试回滚'
+  }
   return raw
 }
 

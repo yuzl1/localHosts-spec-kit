@@ -12,8 +12,11 @@ import (
 )
 
 func RequestAdminAccess() error {
-	if hasElevatedSession() {
+	if hasElevatedSession() && elevatedSessionHealthy(500*time.Millisecond) {
 		return nil
+	}
+	if hasElevatedSession() {
+		clearElevatedSession()
 	}
 
 	port, err := pickFreeLocalPort()

@@ -65,6 +65,12 @@ func hasElevatedSession() bool {
 	return elevatedSessionRef != nil && elevatedSessionRef.BaseURL != "" && elevatedSessionRef.Token != ""
 }
 
+func clearElevatedSession() {
+	elevatedMu.Lock()
+	defer elevatedMu.Unlock()
+	elevatedSessionRef = nil
+}
+
 func setElevatedSession(baseURL string, token string) {
 	elevatedMu.Lock()
 	defer elevatedMu.Unlock()
@@ -119,6 +125,14 @@ func waitForElevatedSession(baseURL string, timeout time.Duration) error {
 	return fmt.Errorf("elevated helper not ready")
 }
 
+func elevatedSessionHealthy(timeout time.Duration) bool {
+	s := getElevatedSession()
+	if s == nil {
+		return false
+	}
+	return waitForElevatedSession(s.BaseURL, timeout) == nil
+}
+
 type applyRequest struct {
 	Token      string `json:"token"`
 	HostsPath  string `json:"hostsPath"`
@@ -149,17 +163,24 @@ func applyHostsViaSession(hostsPath string, content []byte) error {
 	client := http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Post(s.BaseURL+"/apply", "application/json", bytes.NewReader(raw))
 	if err != nil {
-		return fmt.Errorf("WRITE_FAILED: %w", err)
+		clearElevatedSession()
+		return ErrNoElevatedSession
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		clearElevatedSession()
+		return ErrNoElevatedSession
+	}
 
 	out, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("WRITE_FAILED: %w", err)
+		clearElevatedSession()
+		return ErrNoElevatedSession
 	}
 	var parsed applyResponse
 	if err := json.Unmarshal(out, &parsed); err != nil {
-		return fmt.Errorf("WRITE_FAILED: %s", string(out))
+		clearElevatedSession()
+		return ErrNoElevatedSession
 	}
 	if parsed.OK {
 		return nil
@@ -172,6 +193,13 @@ func applyHostsViaSession(hostsPath string, content []byte) error {
 	if msg == "" {
 		msg = "unknown error"
 	}
+	if code == "PERMISSION_DENIED" || code == "CANCELLED" {
+		return fmt.Errorf("%s: %s", code, msg)
+	}
+	if code == "WRITE_FAILED" {
+		return fmt.Errorf("%s: %s", code, msg)
+	}
+	clearElevatedSession()
 	return fmt.Errorf("%s: %s", code, msg)
 }
 
