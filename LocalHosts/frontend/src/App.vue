@@ -75,6 +75,18 @@ function formatBytes(n) {
   return `${fixed} ${units[idx]}`
 }
 
+function formatUpdateStage() {
+  const s = updateProgress.stage
+  if (s === 'checking') return '检查中…'
+  if (s === 'available') return '发现新版本'
+  if (s === 'downloading') return '下载中…'
+  if (s === 'downloaded') return '下载完成'
+  if (s === 'installing') return '安装中（将自动重启）'
+  if (s === 'done') return '已开始安装'
+  if (s === 'error') return '失败'
+  return updateProgress.message || s || ''
+}
+
 async function loadUpdateSettings() {
   try {
     const settings = await getUpdateSettings()
@@ -620,13 +632,15 @@ function lineIndexAtCursor(text, cursor) {
         <div class="modal-row">
           <div class="modal-field">
             <div class="modal-field-label">当前版本</div>
-            <div class="modal-text">{{ updateInfo?.currentVersion || '-' }}</div>
+            <div class="modal-text version-number">{{ updateInfo?.currentVersion || '-' }}</div>
           </div>
           <div class="modal-field">
             <div class="modal-field-label">最新版本</div>
-            <div class="modal-text">{{ updateInfo?.latestVersion || '-' }}</div>
+            <div class="modal-text version-number">{{ updateInfo?.latestVersion || '-' }}</div>
           </div>
         </div>
+
+        <div class="update-tip" v-if="updateInfo?.hasUpdate">下载完成后会自动退出并安装，随后自动重新打开</div>
 
         <div class="modal-row">
           <div class="modal-field full">
@@ -651,7 +665,7 @@ function lineIndexAtCursor(text, cursor) {
               <div class="progress-bar" :style="{ width: `${updateProgress.percent || 0}%` }"></div>
             </div>
             <div class="subhint">
-              {{ updateProgress.message || updateProgress.stage }}
+              {{ formatUpdateStage() }}
               <span v-if="updateProgress.totalBytes > 0"> · {{ formatBytes(updateProgress.downloadedBytes) }} / {{ formatBytes(updateProgress.totalBytes) }}</span>
               <span v-else-if="updateProgress.downloadedBytes > 0"> · {{ formatBytes(updateProgress.downloadedBytes) }}</span>
             </div>
@@ -910,6 +924,23 @@ function lineIndexAtCursor(text, cursor) {
   font-size: 13px;
   color: var(--text-primary);
   padding-top: 6px;
+}
+
+.version-number {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding-top: 2px;
+}
+
+.update-tip {
+  margin: -4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .proxy-grid {

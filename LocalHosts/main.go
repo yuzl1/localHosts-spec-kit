@@ -5,11 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,6 +29,9 @@ var assets embed.FS
 
 func main() {
 	if runElevatedHelperIfNeeded() {
+		return
+	}
+	if runUpdateApplyIfNeeded() {
 		return
 	}
 
@@ -49,6 +56,75 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+func runUpdateApplyIfNeeded() bool {
+	fs := flag.NewFlagSet("update-apply", flag.ContinueOnError)
+	enabled := fs.Bool("update-apply", false, "")
+	pid := fs.Int("pid", 0, "")
+	target := fs.String("target", "", "")
+	src := fs.String("src", "", "")
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		return false
+	}
+	if !*enabled {
+		return false
+	}
+	if *pid <= 0 || strings.TrimSpace(*target) == "" || strings.TrimSpace(*src) == "" {
+		os.Exit(2)
+	}
+
+	deadline := time.Now().Add(2 * time.Minute)
+	for time.Now().Before(deadline) {
+		if !processAlive(*pid) {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	t := strings.TrimSpace(*target)
+	s := strings.TrimSpace(*src)
+	needsAdmin := strings.HasPrefix(t, "/Applications/")
+	tmp := t + ".tmp"
+	_ = os.RemoveAll(tmp)
+
+	if needsAdmin {
+		cmdString := strings.Join([]string{
+			"rm -rf " + shQuote(tmp),
+			"ditto " + shQuote(s) + " " + shQuote(tmp),
+			"rm -rf " + shQuote(t),
+			"mv " + shQuote(tmp) + " " + shQuote(t),
+		}, " && ")
+
+		script := fmt.Sprintf(`do shell script "%s" with administrator privileges`, escapeOsaString(cmdString))
+		cmd := exec.Command("osascript", "-e", script)
+		cmd.Stdout = io.Discard
+		cmd.Stderr = io.Discard
+		_ = cmd.Run()
+		_ = exec.Command("open", t).Start()
+		os.Exit(0)
+	}
+
+	if err := exec.Command("ditto", s, tmp).Run(); err == nil {
+		_ = os.RemoveAll(t)
+		_ = os.Rename(tmp, t)
+		_ = exec.Command("open", t).Start()
+	}
+	os.Exit(0)
+	return true
+}
+
+func shQuote(s string) string {
+	if s == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
+}
+
+func escapeOsaString(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
 }
 
 type elevatedApplyRequest struct {

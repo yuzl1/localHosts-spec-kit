@@ -23,6 +23,12 @@ func InstallUpdate(ctx context.Context, installerPath string) error {
 		return err
 	}
 
+	exePath, err := os.Executable()
+	if err != nil {
+		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
+		return err
+	}
+
 	extractDir, err := os.MkdirTemp("", "LocalHosts-update-*")
 	if err != nil {
 		EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
@@ -35,42 +41,15 @@ func InstallUpdate(ctx context.Context, installerPath string) error {
 		return err
 	}
 
-	needsSudo := strings.HasPrefix(appPath, "/Applications/")
-	script := `set -e
-pid="$1"
-target="$2"
-src="$3"
-while kill -0 "$pid" 2>/dev/null; do
-  sleep 0.2
-done
-rm -rf "$target.tmp"
-ditto "$src" "$target.tmp"
-rm -rf "$target"
-mv "$target.tmp" "$target"
-open "$target"
-`
-
 	runCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
-	if needsSudo {
-		if err := sudoValidate(runCtx); err != nil {
-			EmitProgress(ctx, Progress{Stage: "error", Message: "permission denied"})
-			return err
-		}
-		cmd := exec.CommandContext(runCtx, "sudo", "-n", "sh", "-c", script, "sh", fmt.Sprintf("%d", os.Getpid()), appPath, newAppPath)
-		cmd.Stdout = io.Discard
-		cmd.Stderr = io.Discard
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		if err := cmd.Start(); err != nil {
-			EmitProgress(ctx, Progress{Stage: "error", Message: "install failed"})
-			return err
-		}
-		EmitProgress(ctx, Progress{Stage: "done", Message: "update scheduled"})
-		return nil
-	}
-
-	cmd := exec.CommandContext(runCtx, "sh", "-c", script, "sh", fmt.Sprintf("%d", os.Getpid()), appPath, newAppPath)
+	cmd := exec.CommandContext(runCtx, exePath,
+		"--update-apply",
+		"--pid", fmt.Sprintf("%d", os.Getpid()),
+		"--target", appPath,
+		"--src", newAppPath,
+	)
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -116,20 +95,4 @@ func extractAppBundle(ctx context.Context, installerPath string, extractDir stri
 		return app, nil
 	}
 	return "", fmt.Errorf("UPDATE_INSTALL_FAILED: extracted app not found")
-}
-
-func sudoValidate(ctx context.Context) error {
-	if _, err := exec.LookPath("script"); err != nil {
-		return err
-	}
-	cmd := exec.CommandContext(ctx, "script", "-q", "/dev/null", "sudo", "-v")
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("CANCELLED: authorization timeout")
-		}
-		return fmt.Errorf("PERMISSION_DENIED: %s", err.Error())
-	}
-	return nil
 }
