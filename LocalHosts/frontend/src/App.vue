@@ -530,7 +530,7 @@ function lineIndexAtCursor(text, cursor) {
 <template>
   <div class="app" :data-theme="workspace.theme">
     <header class="header">
-      <div class="title">LocalHosts</div>
+      <div class="title">LocalHosts <span class="app-version">v{{ appVersion || '-' }}</span></div>
       <div class="actions">
         <div class="theme-select">
           <select class="theme-native" v-model="workspace.theme" @change="scheduleSave">
@@ -566,14 +566,6 @@ function lineIndexAtCursor(text, cursor) {
 
     <div v-else class="layout">
       <aside class="sidebar">
-        <div class="sidebar-brand">
-          <div class="brand-logo">LH</div>
-          <div class="brand-meta">
-            <div class="brand-name">LocalHosts</div>
-            <div class="brand-version">v{{ appVersion || '-' }}</div>
-          </div>
-        </div>
-
         <div class="sidebar-header">
           <div class="section-title">分组</div>
           <button class="btn small" :disabled="!authorized" @click="addGroup">新增分组</button>
@@ -743,6 +735,7 @@ function lineIndexAtCursor(text, cursor) {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  text-align: left;
   color: var(--text-primary);
   background: var(--bg-main);
   transition: background-color 0.3s, color 0.3s;
@@ -816,6 +809,19 @@ function lineIndexAtCursor(text, cursor) {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+}
+
+.app-version {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-surface-active);
+  padding: 2px 6px;
+  border-radius: 6px;
+  letter-spacing: 0;
 }
 
 .actions {
@@ -1017,49 +1023,6 @@ function lineIndexAtCursor(text, cursor) {
   background: var(--bg-surface);
   padding: 16px 12px;
   overflow: auto;
-}
-
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 4px 14px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.brand-logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-surface-active);
-  color: var(--text-primary);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  user-select: none;
-}
-
-.brand-meta {
-  min-width: 0;
-}
-
-.brand-name {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.1;
-}
-
-.brand-version {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sidebar-header {
