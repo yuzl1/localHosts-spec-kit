@@ -87,3 +87,46 @@ export namespace hosts {
 
 }
 
+export namespace update {
+	
+	export class Info {
+	    currentVersion: string;
+	    latestVersion: string;
+	    hasUpdate: boolean;
+	    releaseNotes: string;
+	    publishedAt: string;
+	    assetName: string;
+	    assetURL: string;
+	    assetSize: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Info(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.hasUpdate = source["hasUpdate"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.publishedAt = source["publishedAt"];
+	        this.assetName = source["assetName"];
+	        this.assetURL = source["assetURL"];
+	        this.assetSize = source["assetSize"];
+	    }
+	}
+	export class Settings {
+	    autoCheckOnStartup: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.autoCheckOnStartup = source["autoCheckOnStartup"];
+	    }
+	}
+
+}
+

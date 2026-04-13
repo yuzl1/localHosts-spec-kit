@@ -10,14 +10,38 @@ export function CanWriteHosts() {
   return window['go']['main']['App']['CanWriteHosts']();
 }
 
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
+}
+
+export function DownloadUpdate(arg1) {
+  return window['go']['main']['App']['DownloadUpdate'](arg1);
+}
+
 export function EnsureWriteAccess() {
   return window['go']['main']['App']['EnsureWriteAccess']();
+}
+
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
 }
 
 export function GetHosts() {
   return window['go']['main']['App']['GetHosts']();
 }
 
+export function GetUpdateSettings() {
+  return window['go']['main']['App']['GetUpdateSettings']();
+}
+
+export function InstallUpdate(arg1) {
+  return window['go']['main']['App']['InstallUpdate'](arg1);
+}
+
 export function SaveHosts(arg1) {
   return window['go']['main']['App']['SaveHosts'](arg1);
+}
+
+export function SaveUpdateSettings(arg1) {
+  return window['go']['main']['App']['SaveUpdateSettings'](arg1);
 }

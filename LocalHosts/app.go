@@ -7,15 +7,19 @@ import (
 
 	"LocalHosts/internal/hosts"
 	"LocalHosts/internal/platform"
+	"LocalHosts/internal/update"
 	"LocalHosts/internal/workspace"
 
 	"github.com/google/uuid"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
 	ctx context.Context
 }
+
+var appVersion = "0.0.2"
 
 // NewApp creates a new App application struct
 func NewApp() *App {
@@ -101,13 +105,15 @@ func (a *App) EnsureWriteAccess() error {
 
 // SaveHosts persists the workspace to the user directory.
 func (a *App) SaveHosts(workspaceInput hosts.HostWorkspace) error {
-	state := hosts.WorkspaceState{
-		Version:        1,
-		ComposeEnabled: workspaceInput.ComposeEnabled,
-		Theme:          workspaceInput.Theme,
-		Groups:         workspaceInput.Groups,
-		Entries:        workspaceInput.Entries,
+	state, _, _, err := workspace.LoadOrInit()
+	if err != nil {
+		return err
 	}
+	state.Version = 2
+	state.ComposeEnabled = workspaceInput.ComposeEnabled
+	state.Theme = workspaceInput.Theme
+	state.Groups = workspaceInput.Groups
+	state.Entries = workspaceInput.Entries
 
 	for i := range state.Entries {
 		if state.Entries[i].ID == "" {
@@ -118,7 +124,7 @@ func (a *App) SaveHosts(workspaceInput hosts.HostWorkspace) error {
 		}
 	}
 
-	_, err := workspace.Save(state)
+	_, err = workspace.Save(state)
 	return err
 }
 
@@ -137,6 +143,57 @@ func (a *App) ApplyHosts(workspaceInput hosts.HostWorkspace) error {
 	doc, _, hasBlock, _ := hosts.SplitDocument(raw)
 	content := hosts.BuildHostsFile(doc, workspaceInput, hasBlock)
 	return platform.ApplyHostsWithAdmin(hostsPath, content)
+}
+
+// GetAppVersion returns the application version.
+func (a *App) GetAppVersion() string {
+	return appVersion
+}
+
+// GetUpdateSettings returns update settings from the user workspace.
+func (a *App) GetUpdateSettings() (update.Settings, error) {
+	state, _, _, err := workspace.LoadOrInit()
+	if err != nil {
+		return update.Settings{}, err
+	}
+	return update.Settings{AutoCheckOnStartup: state.AutoCheckOnStartup}, nil
+}
+
+// SaveUpdateSettings persists update settings to the user workspace.
+func (a *App) SaveUpdateSettings(settings update.Settings) error {
+	state, _, _, err := workspace.LoadOrInit()
+	if err != nil {
+		return err
+	}
+	state.AutoCheckOnStartup = settings.AutoCheckOnStartup
+	state.Version = 2
+	_, err = workspace.Save(state)
+	return err
+}
+
+// CheckForUpdate checks remote release metadata and returns update info.
+func (a *App) CheckForUpdate() (update.Info, error) {
+	return update.CheckForUpdate(a.ctx, "yuzl1", "localHosts-spec-kit", appVersion)
+}
+
+// DownloadUpdate downloads the installer for a given update info and returns the local path.
+func (a *App) DownloadUpdate(info update.Info) (string, error) {
+	if strings.TrimSpace(info.AssetURL) == "" || strings.TrimSpace(info.AssetName) == "" {
+		return "", os.ErrInvalid
+	}
+	return update.DownloadInstaller(a.ctx, info.AssetURL, info.AssetName, info.AssetSize)
+}
+
+// InstallUpdate starts the installer and quits the application.
+func (a *App) InstallUpdate(installerPath string) error {
+	if strings.TrimSpace(installerPath) == "" {
+		return os.ErrInvalid
+	}
+	if err := update.InstallUpdate(a.ctx, installerPath); err != nil {
+		return err
+	}
+	runtime.Quit(a.ctx)
+	return nil
 }
 
 func readFile(path string) ([]byte, error) {

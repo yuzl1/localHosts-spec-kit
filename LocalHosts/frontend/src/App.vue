@@ -1,6 +1,19 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { applyHosts, canWriteHosts, ensureWriteAccess, getHosts, saveHosts } from './services/hosts'
+import {
+  applyHosts,
+  canWriteHosts,
+  checkForUpdate,
+  downloadUpdate,
+  ensureWriteAccess,
+  getAppVersion,
+  getHosts,
+  getUpdateSettings,
+  installUpdate,
+  saveHosts,
+  saveUpdateSettings
+} from './services/hosts'
+import { EventsOn } from '../wailsjs/runtime/runtime'
 
 const loading = ref(true)
 const syncing = ref(false)
@@ -8,6 +21,21 @@ const authorizing = ref(false)
 const authorized = ref(false)
 const error = ref('')
 const status = ref('')
+
+const updateModalOpen = ref(false)
+const updateInfo = ref(null)
+const updateInstallerPath = ref('')
+const updateBusy = ref(false)
+const updateError = ref('')
+const updateBannerText = ref('')
+const autoCheckOnStartup = ref(true)
+const updateProgress = reactive({
+  stage: 'idle',
+  downloadedBytes: 0,
+  totalBytes: 0,
+  percent: 0,
+  message: ''
+})
 
 const workspace = reactive({
   composeEnabled: true,
@@ -29,6 +57,99 @@ const groupModalName = ref('')
 
 let saveTimer = 0
 let lastAppliedKey = ''
+
+function formatBytes(n) {
+  const v = Number(n) || 0
+  if (v <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let idx = 0
+  let x = v
+  while (x >= 1024 && idx < units.length - 1) {
+    x /= 1024
+    idx++
+  }
+  const fixed = idx === 0 ? String(Math.round(x)) : x.toFixed(1)
+  return `${fixed} ${units[idx]}`
+}
+
+async function loadUpdateSettings() {
+  try {
+    const settings = await getUpdateSettings()
+    autoCheckOnStartup.value = settings?.autoCheckOnStartup !== false
+  } catch (_) {
+    autoCheckOnStartup.value = true
+  }
+}
+
+async function persistUpdateSettings() {
+  try {
+    await saveUpdateSettings({ autoCheckOnStartup: !!autoCheckOnStartup.value })
+  } catch (e) {
+    updateError.value = String(e)
+  }
+}
+
+function openUpdateModal() {
+  updateModalOpen.value = true
+}
+
+function closeUpdateModal() {
+  if (updateBusy.value) return
+  updateModalOpen.value = false
+}
+
+async function runCheckUpdate({ manual }) {
+  updateError.value = ''
+  updateBannerText.value = ''
+  updateInfo.value = null
+  updateInstallerPath.value = ''
+  updateProgress.stage = 'checking'
+  updateProgress.message = ''
+  updateProgress.downloadedBytes = 0
+  updateProgress.totalBytes = 0
+  updateProgress.percent = 0
+
+  try {
+    await getAppVersion()
+  } catch (_) {
+  }
+
+  try {
+    const info = await checkForUpdate()
+    updateInfo.value = info
+    if (manual) {
+      updateModalOpen.value = true
+    } else if (info?.hasUpdate) {
+      updateBannerText.value = `发现新版本 ${info.latestVersion}，点击查看并更新`
+    }
+  } catch (e) {
+    updateError.value = String(e)
+    if (manual) updateModalOpen.value = true
+  } finally {
+    if (updateProgress.stage === 'checking') updateProgress.stage = 'idle'
+  }
+}
+
+async function manualCheckUpdate() {
+  if (updateBusy.value) return
+  await runCheckUpdate({ manual: true })
+}
+
+async function startUpdate() {
+  if (updateBusy.value) return
+  if (!updateInfo.value || !updateInfo.value.hasUpdate) return
+  updateBusy.value = true
+  updateError.value = ''
+  try {
+    const installerPath = await downloadUpdate(updateInfo.value)
+    updateInstallerPath.value = installerPath
+    await installUpdate(installerPath)
+  } catch (e) {
+    updateError.value = String(e)
+  } finally {
+    updateBusy.value = false
+  }
+}
 
 const selectedGroup = computed(() => {
   if (selectedGroupId.value === 'system') return null
@@ -262,6 +383,15 @@ function moveGroup(groupId, direction) {
 }
 
 onMounted(() => {
+  EventsOn('update:progress', (p) => {
+    if (!p) return
+    updateProgress.stage = p.stage || updateProgress.stage
+    updateProgress.message = p.message || ''
+    updateProgress.downloadedBytes = Number(p.downloadedBytes) || 0
+    updateProgress.totalBytes = Number(p.totalBytes) || 0
+    updateProgress.percent = Number(p.percent) || 0
+  })
+
   refresh().then(async () => {
     try {
       const ok = await canWriteHosts()
@@ -273,6 +403,12 @@ onMounted(() => {
       authorized.value = false
     }
     await authorize()
+  })
+
+  loadUpdateSettings().then(() => {
+    if (autoCheckOnStartup.value) {
+      runCheckUpdate({ manual: false })
+    }
   })
 })
 
@@ -356,6 +492,13 @@ function lineIndexAtCursor(text, cursor) {
           </select>
           <div class="theme-arrow">▾</div>
         </div>
+        <button class="btn" :disabled="loading || updateBusy" @click="manualCheckUpdate">
+          {{ updateProgress.stage === 'checking' ? '检查中…' : '检查更新' }}
+        </button>
+        <label class="toggle">
+          <input type="checkbox" v-model="autoCheckOnStartup" @change="persistUpdateSettings" />
+          <span>启动检查更新</span>
+        </label>
         <label class="toggle">
           <input type="checkbox" :disabled="!authorized" v-model="workspace.composeEnabled" @change="scheduleSave" />
           <span>按分组组装</span>
@@ -367,6 +510,8 @@ function lineIndexAtCursor(text, cursor) {
       </div>
     </header>
 
+    <div v-if="updateBannerText" class="banner ok clickable" @click="openUpdateModal">{{ updateBannerText }}</div>
+    <div v-if="updateError && !updateModalOpen" class="banner error">{{ updateError }}</div>
     <div v-if="error" class="banner error">{{ error }}</div>
 
     <div v-if="loading" class="loading">加载中…</div>
@@ -441,6 +586,53 @@ function lineIndexAtCursor(text, cursor) {
         <div class="modal-actions">
           <button class="btn" @click="closeGroupModal">取消</button>
           <button class="btn primary" @click="confirmGroupModal">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="updateModalOpen" class="modal-mask" @click.self="closeUpdateModal">
+      <div class="modal update-modal">
+        <div class="modal-title">更新</div>
+        <div class="modal-row">
+          <div class="modal-field">
+            <div class="modal-field-label">当前版本</div>
+            <div class="modal-text">{{ updateInfo?.currentVersion || '-' }}</div>
+          </div>
+          <div class="modal-field">
+            <div class="modal-field-label">最新版本</div>
+            <div class="modal-text">{{ updateInfo?.latestVersion || '-' }}</div>
+          </div>
+        </div>
+
+        <div v-if="updateProgress.stage === 'downloading' || updateProgress.stage === 'downloaded' || updateProgress.stage === 'installing'" class="modal-row">
+          <div class="modal-field full">
+            <div class="modal-field-label">进度</div>
+            <div class="progress">
+              <div class="progress-bar" :style="{ width: `${updateProgress.percent || 0}%` }"></div>
+            </div>
+            <div class="subhint">
+              {{ updateProgress.message || updateProgress.stage }}
+              <span v-if="updateProgress.totalBytes > 0"> · {{ formatBytes(updateProgress.downloadedBytes) }} / {{ formatBytes(updateProgress.totalBytes) }}</span>
+              <span v-else-if="updateProgress.downloadedBytes > 0"> · {{ formatBytes(updateProgress.downloadedBytes) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="updateError" class="banner error" style="margin: 10px 0 0;">{{ updateError }}</div>
+
+        <div class="modal-row" v-if="updateInfo?.releaseNotes">
+          <div class="modal-field full">
+            <div class="modal-field-label">更新说明</div>
+            <pre class="release-notes">{{ updateInfo.releaseNotes }}</pre>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn" :disabled="updateBusy" @click="closeUpdateModal">关闭</button>
+          <button class="btn" :disabled="updateBusy" @click="manualCheckUpdate">重新检查</button>
+          <button class="btn primary" :disabled="updateBusy || !updateInfo?.hasUpdate" @click="startUpdate">
+            {{ updateBusy ? '更新中…' : (updateInfo?.hasUpdate ? '立即更新' : '已是最新') }}
+          </button>
         </div>
       </div>
     </div>
@@ -668,6 +860,45 @@ function lineIndexAtCursor(text, cursor) {
 .banner.ok {
   background: var(--bg-banner-ok);
   color: var(--text-ok);
+}
+
+.banner.clickable {
+  cursor: pointer;
+}
+
+.modal-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  padding-top: 6px;
+}
+
+.progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--btn-primary-bg);
+  width: 0%;
+  transition: width 0.2s;
+}
+
+.release-notes {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 .loading {

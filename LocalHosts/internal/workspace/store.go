@@ -65,9 +65,10 @@ func Save(state hosts.WorkspaceState) (string, error) {
 
 func defaultState() hosts.WorkspaceState {
 	return hosts.WorkspaceState{
-		Version:        1,
-		ComposeEnabled: true,
-		Theme:          "auto",
+		Version:            2,
+		ComposeEnabled:     true,
+		Theme:              "auto",
+		AutoCheckOnStartup: true,
 		Groups: []hosts.HostGroup{
 			{
 				ID:      "default",
@@ -84,6 +85,11 @@ func defaultState() hosts.WorkspaceState {
 func normalizeState(state hosts.WorkspaceState) hosts.WorkspaceState {
 	if state.Version == 0 {
 		state.Version = 1
+	}
+
+	if state.Version < 2 {
+		state.AutoCheckOnStartup = true
+		state.Version = 2
 	}
 
 	if state.Theme == "" {
